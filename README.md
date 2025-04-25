@@ -1,16 +1,14 @@
-# AI Content Detector
+# AI Content Detector API
 
-This tool analyzes text to determine whether it was written by a human or an AI model. It can process individual sentences, paragraphs, or whole documents.
+This API analyzes text to determine whether it was written by a human or an AI model. It provides simple binary classification (0 for human, 1 for AI) for text inputs.
 
 ## Features
 
-- Binary classification (Human vs AI) for text content
+- REST API for text classification
+- Binary prediction (0 = human, 1 = AI)
 - Sentence-level analysis for longer documents
 - Standardization of input text
-- Support for asynchronous processing of multiple sentences
-- Detailed debug mode
-- Interactive CLI mode
-- Configurable model parameters
+- Detailed results for document analysis
 
 ## Requirements
 
@@ -18,7 +16,13 @@ This tool analyzes text to determine whether it was written by a human or an AI 
 - Predibase API access
 - Required Python packages (install via pip):
   - predibase
-  - asyncio
+  - pandas
+  - numpy
+  - scikit-learn
+  - matplotlib
+  - tqdm
+  - fastapi
+  - uvicorn
   - nltk (optional, for better sentence tokenization)
 
 ## Configuration
@@ -29,9 +33,101 @@ The `config.py` file contains important settings for the API and model:
 - MODEL_NAME: Name of the fine-tuned model
 - TEMPERATURE: Inference temperature (default: 0.0 for deterministic outputs)
 
-## Usage
+## API Usage
 
-### Basic Usage
+### Starting the API
+
+```bash
+# Start the API server
+uvicorn api:app --host 0.0.0.0 --port 8000
+```
+
+### API Endpoints
+
+#### 1. Health Check
+
+```
+GET /
+```
+
+Returns status information about the API.
+
+#### 2. Single Text Detection
+
+```
+POST /detect
+```
+
+Analyze a single piece of text and get a binary prediction (0 for human, 1 for AI).
+
+**Request Body:**
+```json
+{
+  "text": "Text to analyze",
+  "adapter_id": "optional_adapter_id/version"
+}
+```
+
+**Response:**
+```json
+{
+  "prediction": 0,  // 0 = human, 1 = AI
+  "text": "Text to analyze"
+}
+```
+
+#### 3. Document Analysis
+
+```
+POST /detect-document
+```
+
+Analyze a document by breaking it into sentences and detecting each one.
+
+**Request Body:**
+```json
+{
+  "text": "This is a longer document with multiple sentences. Each sentence will be analyzed separately.",
+  "adapter_id": "optional_adapter_id/version",
+  "min_words": 5
+}
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {
+      "sentence": "This is a longer document with multiple sentences.",
+      "prediction": 0,
+      "index": 0
+    },
+    {
+      "sentence": "Each sentence will be analyzed separately.",
+      "prediction": 1,
+      "index": 1
+    }
+  ],
+  "overall_prediction": 1,
+  "human_count": 1,
+  "ai_count": 1,
+  "unknown_count": 0,
+  "total_sentences": 2,
+  "analyzed_sentences": 2
+}
+```
+
+## Deployment
+
+This project includes a Procfile for easy deployment to platforms like Heroku, Railway, etc.
+
+```
+web: uvicorn api:app --host 0.0.0.0 --port $PORT
+```
+
+## Command-Line Interface
+
+The original command-line interface is still available through `inference.py`:
 
 ```bash
 # Analyze a single piece of text
@@ -42,41 +138,4 @@ python inference.py --file path/to/document.txt
 
 # Process as a document with sentence-level analysis
 python inference.py --file path/to/document.txt --document
-
-# Interactive mode
-python inference.py
 ```
-
-### Advanced Options
-
-```bash
-# Specify minimum words for sentence analysis
-python inference.py --file document.txt --document --min-words 10
-
-# Use a specific adapter
-python inference.py --adapter custom_model/2
-
-# Save results to a file
-python inference.py --file document.txt --document --output results.json
-
-# Disable debug mode
-python inference.py --text "Sample text" --no-debug
-
-# Set max concurrent requests for async processing
-python inference.py --file large_document.txt --document --max-concurrent 20
-```
-
-## Output
-
-For single texts, the output includes:
-- Binary prediction (0 for human, 1 for AI)
-- Full model response
-
-For documents, the output includes:
-- Sentence-by-sentence analysis
-- Overall document classification
-- Statistics on human vs AI sentences
-
-## License
-
-MIT
